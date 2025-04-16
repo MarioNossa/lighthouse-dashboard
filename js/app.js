@@ -21,6 +21,8 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
     if (data) {
       renderResult(url, data);
       saveToHistory(url, data);
+    } else {
+      alert(`No se pudo analizar correctamente la URL: ${url}`);
     }
   }
 });
@@ -58,6 +60,11 @@ function renderResult(url, categories) {
 }
 
 function saveToHistory(url, data) {
+  if (!data || !data.performance || !data.accessibility || !data.seo) {
+    console.warn(`Datos incompletos para ${url}, no se guardó en historial.`);
+    return;
+  }
+
   const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
   if (!history[url]) history[url] = [];
   history[url].push({
