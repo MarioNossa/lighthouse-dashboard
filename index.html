@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Lighthouse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 p-6">
+  <h1 class="text-2xl font-bold mb-4">Lighthouse Dashboard - Comparador de Sitios</h1>
+
+  <div class="mb-4">
+    <label class="block font-medium">Ingresa hasta 4 URLs:</label>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+      <input type="url" class="border p-2 rounded" id="url1" placeholder="https://www.ejemplo1.com">
+      <input type="url" class="border p-2 rounded" id="url2" placeholder="https://www.ejemplo2.com">
+      <input type="url" class="border p-2 rounded" id="url3" placeholder="https://www.ejemplo3.com">
+      <input type="url" class="border p-2 rounded" id="url4" placeholder="https://www.ejemplo4.com">
+    </div>
+    <button id="analyzeBtn" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Analizar</button>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4"><canvas id="historyChart" height="100"></canvas></div><div id="results" class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
