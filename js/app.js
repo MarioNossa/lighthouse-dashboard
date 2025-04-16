@@ -71,6 +71,23 @@ function saveToHistory(url, data) {
 function exportToCSV() {
   const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
   let csv = "URL,Fecha,Performance,Accessibility,SEO\n";
+
+  for (const url in history) {
+    history[url].forEach(entry => {
+      csv += `${url},${entry.date},${entry.performance},${entry.accessibility},${entry.seo}\n`;
+    });
+  }
+
+  const blob = new Blob([csv.replace(/\n/g, "\r\n")], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = "lighthouse_report.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+  const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
+  let csv = "URL,Fecha,Performance,Accessibility,SEO\n";
   for (const url in history) {
     const h = history[url];
     csv += `${url},${h.date},${h.performance},${h.accessibility},${h.seo}\n`;
