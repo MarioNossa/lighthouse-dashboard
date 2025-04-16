@@ -18,8 +18,10 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
 
   for (const url of urls) {
     const data = await fetchLighthouseData(url);
-    if (data) renderResult(url, data);
-    saveToHistory(url, data);
+    if (data) {
+      renderResult(url, data);
+      saveToHistory(url, data);
+    }
   }
 });
 
@@ -62,11 +64,10 @@ function saveToHistory(url, data) {
     date: new Date().toISOString(),
     performance: Math.round(data.performance.score * 100),
     accessibility: Math.round(data.accessibility.score * 100),
-    seo: Math.round(data.seo.score * 100),
-  };
+    seo: Math.round(data.seo.score * 100)
+  });
   localStorage.setItem('lighthouse-history', JSON.stringify(history));
 }
-
 
 function exportToCSV() {
   const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
@@ -86,19 +87,6 @@ function exportToCSV() {
   link.click();
   document.body.removeChild(link);
 }
-  const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
-  let csv = "URL,Fecha,Performance,Accessibility,SEO\n";
-  for (const url in history) {
-    const h = history[url];
-    csv += `${url},${h.date},${h.performance},${h.accessibility},${h.seo}\n`;
-  }
-
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = "lighthouse_report.csv";
-  link.click();
-}
 
 document.addEventListener('DOMContentLoaded', () => {
   const exportBtn = document.createElement('button');
@@ -112,63 +100,25 @@ function renderChart() {
   const ctx = document.getElementById('historyChart').getContext('2d');
   const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
 
-  const labels = Object.keys(history);
-  const performance = labels.map(url => history[url].performance);
-  const accessibility = labels.map(url => history[url].accessibility);
-  const seo = labels.map(url => history[url].seo);
-
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Performance',
-          data: performance,
-          backgroundColor: 'rgba(75, 192, 192, 0.5)',
-        },
-        {
-          label: 'Accessibility',
-          data: accessibility,
-          backgroundColor: 'rgba(153, 102, 255, 0.5)',
-        },
-        {
-          label: 'SEO',
-          data: seo,
-          backgroundColor: 'rgba(255, 159, 64, 0.5)',
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'top' },
-        title: { display: true, text: 'Historial de Métricas por URL' }
-      }
-    }
-  });
-}
-
-function renderChart() {
-  const ctx = document.getElementById('historyChart').getContext('2d');
-  const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
-
   const datasets = [];
-  let labels = new Set();
+  let index = 0;
 
-  Object.entries(history).forEach(([url, records], i) => {
-    const perfData = records.map(entry => ({
+  Object.entries(history).forEach(([url, records]) => {
+    const data = records.map(entry => ({
       x: new Date(entry.date),
       y: entry.performance
     }));
+
     datasets.push({
       label: `Performance - ${url}`,
-      data: perfData,
+      data: data,
+      borderColor: `hsl(${index * 60}, 70%, 50%)`,
+      backgroundColor: `hsl(${index * 60}, 70%, 80%)`,
       fill: false,
-      borderColor: `hsl(${i * 60}, 70%, 50%)`,
-      tension: 0.1
+      tension: 0.3
     });
-    records.forEach(r => labels.add(new Date(r.date).toISOString().split("T")[0]));
+
+    index++;
   });
 
   new Chart(ctx, {
@@ -187,15 +137,29 @@ function renderChart() {
           time: {
             unit: 'day'
           },
-          title: { display: true, text: 'Fecha' }
+          title: {
+            display: true,
+            text: 'Fecha'
+          }
         },
         y: {
-          title: { display: true, text: 'Performance' }
+          title: {
+            display: true,
+            text: 'Puntaje de Performance'
+          },
+          min: 0,
+          max: 100
         }
       },
       plugins: {
-        legend: { position: 'top' },
-        title: { display: true, text: 'Evolución de Performance por URL' }
+        title: {
+          display: true,
+          text: 'Evolución del Performance por URL'
+        },
+        legend: {
+          display: true,
+          position: 'top'
+        }
       }
     }
   });
