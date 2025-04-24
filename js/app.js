@@ -1,5 +1,69 @@
 const API_KEY = 'AIzaSyDAoLsRkVih2hvLyxh6F_eW8mewQNSEfIM';
 
+// Mensajes creativos para el modal
+const waitingMessages = [
+  "Mientras espera... ¡canta como si nadie te escuchara! 🎤",
+  "¿Ya te estiraste hoy? Hazlo mientras analizamos... 🤸‍♂️",
+  "El café siempre es buena idea en tiempos de espera ☕️",
+  "Respira profundo... la paciencia es clave 🧘",
+  "Esto está quedando increíble, espera un poco más 🚀"
+];
+
+let modalInterval;
+let modalCurrent = 0;
+
+// Muestra el modal de análisis
+function showModal() {
+  let modal = document.getElementById('analyze-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'analyze-modal';
+    modal.className = "fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-60";
+    modal.innerHTML = `
+      <div class="bg-white p-8 rounded-lg shadow-lg text-center flex flex-col items-center">
+        <div class="mb-4 animate-spin">
+          <svg width="40" height="40" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="35" stroke="#2563eb" stroke-width="10" fill="none" stroke-dasharray="164" stroke-dashoffset="124"></circle>
+          </svg>
+        </div>
+        <div id="modal-message" class="text-lg font-semibold mb-2">${waitingMessages[0]}</div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  // Mensaje cíclico
+  modalCurrent = 0;
+  document.getElementById('modal-message').textContent = waitingMessages[modalCurrent];
+  modalInterval = setInterval(() => {
+    modalCurrent = (modalCurrent + 1) % waitingMessages.length;
+    document.getElementById('modal-message').textContent = waitingMessages[modalCurrent];
+  }, 3000);
+  modal.style.display = 'flex';
+}
+
+// Oculta el modal de análisis
+function hideModal() {
+  clearInterval(modalInterval);
+  const modal = document.getElementById('analyze-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+// Mensaje de error visual
+function showError(message) {
+  let alert = document.getElementById('error-alert');
+  if (!alert) {
+    alert = document.createElement('div');
+    alert.id = 'error-alert';
+    alert.className = 'fixed top-8 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded shadow-lg text-lg font-bold';
+    document.body.appendChild(alert);
+  }
+  alert.textContent = message;
+  alert.style.display = 'block';
+  setTimeout(() => {
+    alert.style.display = 'none';
+  }, 6000);
+}
+
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
   const urls = [
     document.getElementById('url1').value,
@@ -9,9 +73,11 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
   ].filter(Boolean);
 
   if (urls.length === 0) {
-    alert('Debes ingresar al menos una URL');
+    showError('Debes ingresar al menos una URL');
     return;
   }
+
+  showModal();
 
   const resultsContainer = document.getElementById('results');
   resultsContainer.innerHTML = '';
@@ -22,9 +88,10 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
       renderResult(url, data);
       saveToHistory(url, data);
     } else {
-      alert(`No se pudo analizar correctamente la URL: ${url}`);
+      showError(`No se pudo analizar correctamente la URL: ${url}`);
     }
   }
+  hideModal();
 });
 
 async function fetchLighthouseData(url) {
@@ -61,7 +128,7 @@ function renderResult(url, categories) {
 
 function saveToHistory(url, data) {
   if (!data || !data.performance || !data.accessibility || !data.seo) {
-    console.warn(`Datos incompletos para ${url}, no se guardó en historial.`);
+    showError(`Datos incompletos para ${url}, no se guardó en historial.`);
     return;
   }
 
