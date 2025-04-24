@@ -54,14 +54,14 @@ function showError(message) {
   if (!alert) {
     alert = document.createElement('div');
     alert.id = 'error-alert';
-    alert.className = 'fixed top-8 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded shadow-lg text-lg font-bold';
+    alert.className = 'fixed top-8 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded shadow-lg text-lg font-bold max-w-xl w-fit break-words';
     document.body.appendChild(alert);
   }
   alert.textContent = message;
   alert.style.display = 'block';
   setTimeout(() => {
     alert.style.display = 'none';
-  }, 6000);
+  }, 10000);
 }
 
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
@@ -84,9 +84,11 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
 
   for (const url of urls) {
     const data = await fetchLighthouseData(url);
-    if (data) {
-      renderResult(url, data);
-      saveToHistory(url, data);
+    if (data && data.categories) {
+      renderResult(url, data.categories);
+      saveToHistory(url, data.categories);
+    } else if (data && data.apiError) {
+      showError(`Error al analizar ${url}: ${data.apiError}`);
     } else {
       showError(`No se pudo analizar correctamente la URL: ${url}`);
     }
@@ -99,9 +101,14 @@ async function fetchLighthouseData(url) {
   try {
     const res = await fetch(api);
     const json = await res.json();
-    return json.lighthouseResult?.categories;
+    if (!json.lighthouseResult) {
+      // Mostrar en pantalla el error que devuelve la API
+      let apiErrorMsg = (json.error && json.error.message) ? json.error.message : JSON.stringify(json);
+      return { apiError: apiErrorMsg };
+    }
+    return json.lighthouseResult;
   } catch (e) {
-    console.error('Error al obtener los datos:', e);
+    showError(`Error al obtener datos para ${url}: ${e.message}`);
     return null;
   }
 }
@@ -228,7 +235,7 @@ function renderChart() {
       plugins: {
         title: {
           display: true,
-          text: 'Evolución del Performance por URL'
+          text: 'Evolución del Performance por URL 1.0'
         },
         legend: {
           display: true,
@@ -237,21 +244,6 @@ function renderChart() {
       }
     }
   });
-}
-async function fetchLighthouseData(url) {
-  const api = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=desktop&key=${API_KEY}`;
-  try {
-    const res = await fetch(api);
-    const json = await res.json();
-    if (!json.lighthouseResult) {
-      showError(`API Error para ${url}: ${JSON.stringify(json, null, 2)}`);
-      return null;
-    }
-    return json.lighthouseResult?.categories;
-  } catch (e) {
-    showError(`Error al obtener datos para ${url}: ${e.message}`);
-    return null;
-  }
 }
 
 document.addEventListener('DOMContentLoaded', renderChart);
