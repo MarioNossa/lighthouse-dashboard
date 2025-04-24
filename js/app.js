@@ -238,5 +238,20 @@ function renderChart() {
     }
   });
 }
+async function fetchLighthouseData(url) {
+  const api = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=desktop&key=${API_KEY}`;
+  try {
+    const res = await fetch(api);
+    const json = await res.json();
+    if (!json.lighthouseResult) {
+      showError(`API Error para ${url}: ${JSON.stringify(json, null, 2)}`);
+      return null;
+    }
+    return json.lighthouseResult?.categories;
+  } catch (e) {
+    showError(`Error al obtener datos para ${url}: ${e.message}`);
+    return null;
+  }
+}
 
 document.addEventListener('DOMContentLoaded', renderChart);
