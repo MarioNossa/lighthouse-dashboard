@@ -94,6 +94,8 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
     }
   }
   hideModal();
+  // Re-dibujar la gráfica con los datos actualizados
+  renderChart();
 });
 
 async function fetchLighthouseData(url) {
@@ -113,19 +115,27 @@ async function fetchLighthouseData(url) {
   }
 }
 
+// Solo las 4 métricas clave
 function renderResult(url, categories) {
   const results = document.getElementById('results');
-  const getScore = (cat) => categories[cat]?.score ? Math.round(categories[cat].score * 100) : 'N/A';
+
+  const labels = {
+    performance: "Rendimiento",
+    accessibility: "Accesibilidad",
+    "best-practices": "Buenas prácticas",
+    seo: "SEO"
+  };
+
+  const getScore = (cat) =>
+    categories[cat]?.score != null ? Math.round(categories[cat].score * 100) : 'N/A';
 
   const html = `
     <div class="bg-white shadow rounded p-4">
       <h2 class="text-lg font-bold mb-2">${url}</h2>
       <ul class="space-y-1">
-        <li><strong>Performance:</strong> ${getScore('performance')}</li>
-        <li><strong>Accesibilidad:</strong> ${getScore('accessibility')}</li>
-        <li><strong>Buenas prácticas:</strong> ${getScore('best-practices')}</li>
-        <li><strong>SEO:</strong> ${getScore('seo')}</li>
-        <li><strong>PWA:</strong> ${getScore('pwa')}</li>
+        ${Object.entries(labels)
+          .map(([key, label]) => `<li><strong>${label}:</strong> ${getScore(key)}</li>`)
+          .join('')}
       </ul>
     </div>
   `;
@@ -134,7 +144,7 @@ function renderResult(url, categories) {
 }
 
 function saveToHistory(url, data) {
-  if (!data || !data.performance || !data.accessibility || !data.seo) {
+  if (!data || !data.performance || !data.accessibility || !data.seo || !data["best-practices"]) {
     showError(`Datos incompletos para ${url}, no se guardó en historial.`);
     return;
   }
@@ -145,6 +155,7 @@ function saveToHistory(url, data) {
     date: new Date().toISOString(),
     performance: Math.round(data.performance.score * 100),
     accessibility: Math.round(data.accessibility.score * 100),
+    bestPractices: Math.round(data["best-practices"].score * 100),
     seo: Math.round(data.seo.score * 100)
   });
   localStorage.setItem('lighthouse-history', JSON.stringify(history));
@@ -152,11 +163,11 @@ function saveToHistory(url, data) {
 
 function exportToCSV() {
   const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
-  let csv = "URL,Fecha,Performance,Accessibility,SEO\n";
+  let csv = "URL,Fecha,Rendimiento,Accesibilidad,Buenas prácticas,SEO\n";
 
   for (const url in history) {
     history[url].forEach(entry => {
-      csv += `${url},${entry.date},${entry.performance},${entry.accessibility},${entry.seo}\n`;
+      csv += `${url},${entry.date},${entry.performance},${entry.accessibility},${entry.bestPractices},${entry.seo}\n`;
     });
   }
 
@@ -175,75 +186,68 @@ document.addEventListener('DOMContentLoaded', () => {
   exportBtn.className = "mt-4 px-4 py-2 bg-green-600 text-white rounded ml-2";
   exportBtn.onclick = exportToCSV;
   document.querySelector('body').appendChild(exportBtn);
+  renderChart(); // dibujar gráfica al cargar
 });
 
+// Nueva gráfica con las 4 métricas abajo
 function renderChart() {
   const ctx = document.getElementById('historyChart').getContext('2d');
   const history = JSON.parse(localStorage.getItem('lighthouse-history') || '{}');
 
+  // Borra el canvas si ya existe un gráfico
+  if (window.lhChart && typeof window.lhChart.destroy === 'function') {
+    window.lhChart.destroy();
+  }
+
+  const metrics = [
+    { key: "performance", label: "Rendimiento", color: "hsl(220, 70%, 55%)" },
+    { key: "accessibility", label: "Accesibilidad", color: "hsl(120, 60%, 50%)" },
+    { key: "bestPractices", label: "Buenas prácticas", color: "hsl(35, 90%, 55%)" },
+    { key: "seo", label: "SEO", color: "hsl(320, 70%, 50%)" }
+  ];
+
   const datasets = [];
-  let index = 0;
+  let colorIndex = 0;
 
   Object.entries(history).forEach(([url, records]) => {
-    const data = records.map(entry => ({
-      x: new Date(entry.date),
-      y: entry.performance
-    }));
-
-    datasets.push({
-      label: `Performance - ${url}`,
-      data: data,
-      borderColor: `hsl(${index * 60}, 70%, 50%)`,
-      backgroundColor: `hsl(${index * 60}, 70%, 80%)`,
-      fill: false,
-      tension: 0.3
+    metrics.forEach((metric, i) => {
+      datasets.push({
+        label: `${metric.label} - ${url}`,
+        data: records.map(entry => ({
+          x: new Date(entry.date),
+          y: entry[metric.key]
+        })),
+        borderColor: metric.color,
+        backgroundColor: metric.color + "44",
+        fill: false,
+        tension: 0.2,
+        borderDash: [4 * i, 4 * i + 2],
+        pointRadius: 3
+      });
     });
-
-    index++;
+    colorIndex++;
   });
 
-  new Chart(ctx, {
+  window.lhChart = new Chart(ctx, {
     type: 'line',
-    data: {
-      datasets: datasets
-    },
+    data: { datasets },
     options: {
-      parsing: {
-        xAxisKey: 'x',
-        yAxisKey: 'y'
-      },
+      parsing: { xAxisKey: 'x', yAxisKey: 'y' },
       scales: {
         x: {
           type: 'time',
-          time: {
-            unit: 'day'
-          },
-          title: {
-            display: true,
-            text: 'Fecha'
-          }
+          time: { unit: 'day' },
+          title: { display: true, text: 'Fecha' }
         },
         y: {
-          title: {
-            display: true,
-            text: 'Puntaje de Performance'
-          },
-          min: 0,
-          max: 100
+          title: { display: true, text: 'Puntaje (%)' },
+          min: 0, max: 100
         }
       },
       plugins: {
-        title: {
-          display: true,
-          text: 'Evolución del Performance por URL 1.0'
-        },
-        legend: {
-          display: true,
-          position: 'top'
-        }
+        title: { display: true, text: 'Evolución de Métricas Lighthouse por URL' },
+        legend: { display: true, position: 'top' }
       }
     }
   });
 }
-
-document.addEventListener('DOMContentLoaded', renderChart);
